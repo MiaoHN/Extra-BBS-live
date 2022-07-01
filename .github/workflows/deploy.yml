@@ -1,0 +1,37 @@
+name: cicd
+
+on: 
+  push:
+    branches: 
+      - master
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+      - run: |
+          npm install
+          npm run build
+      
+      - name: executing remote ssh commands using password
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.ALIYUN_HOST }}
+          username: ${{ secrets.ALIYUN_USER }}
+          password: ${{ secrets.ALIYUN_PASSWORD }}
+          script: bash /ppap/del.sh
+      
+      - name: Deploy
+        uses: easingthemes/ssh-deploy@v2.1.1
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          ARGS: '-avz' #加上--delete代表让目标目录与源目录一致
+          SOURCE: 'dist/'
+          REMOTE_HOST: ${{ secrets.ALIYUN_HOST }}
+          REMOTE_USER: ${{ secrets.ALIYUN_USER }}
+          TARGET: ${{ secrets.ALIYUN_PPAPLIVE_PATH }}
